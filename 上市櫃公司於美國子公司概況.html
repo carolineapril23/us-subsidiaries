@@ -79,6 +79,7 @@ button.tag{font:inherit;font-size:.76rem;cursor:pointer;color:var(--fg);text-ali
 .fin b{font-weight:600;font-size:.88rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .neg{color:var(--neg)} .pos{color:var(--pos)}
 .note{font-size:.78rem;color:var(--muted);margin:0}
+.backbar{position:sticky;top:0;z-index:6;background:var(--bg);padding:8px 0;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--line);margin-bottom:10px}
 .cb{font-size:.7rem;font-weight:600;border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:middle;white-space:nowrap}
 .cb.ok{border:1px solid var(--pos);color:var(--pos)}.cb.warn{background:var(--neg);color:var(--bg)}
 .srcbox{font-size:.8rem;color:var(--muted)}.srcbox summary{cursor:pointer}.srcbox p{margin:4px 0;overflow-wrap:anywhere}
@@ -151,6 +152,7 @@ svg{letter-spacing:0;display:block;width:100%;height:auto;min-height:300px;touch
     <div class="grid" id="grid"></div>
   </section>
   <section id="view-chain">
+    <div id="backbar" class="backbar" hidden><button id="backbtn" type="button" class="xbtn">← 返回清單</button><span class="note">回到剛才的篩選與捲動位置</span></div>
     <p class="note">依證交所／櫃買中心「產業價值鏈資訊平台」半導體產業鏈分類。點業務說明可開啟該公司在平台上的頁面，點美國子公司數可跳到清單。</p>
     <div id="diagram" class="diagram"></div>
     <div id="chain"></div>
@@ -279,9 +281,10 @@ function render(){
 }
 var BIZ={},CAP={};
 D.forEach(function(x){BIZ[x.n]=x.biz;CAP[x.n]=x.cap});
+var BACK=null;
 function setTab(m){
   $("tab-list").setAttribute("aria-selected",m==="list");$("tab-chain").setAttribute("aria-selected",m==="chain");$("view-chain").hidden=m!=="chain";
-  $("view-list").hidden=m!=="list";
+  $("view-list").hidden=m!=="list";$("backbar").hidden=!(m==="chain"&&BACK);
   try{localStorage.setItem("usSubTab",m)}catch(e){}
 }
 function init(){
@@ -293,7 +296,7 @@ function init(){
   ["q","parent","sort","state","chainf"].forEach(function(i){$(i).addEventListener("input",render)});
   $("origin").addEventListener("input",function(){D.forEach(function(x){x.drv=null});$("drvmsg").textContent="";render()});
   $("origin").addEventListener("keydown",function(e){if(e.key==="Enter")driveAll()});$("drvgo").onclick=driveAll;
-  $("tab-list").onclick=function(){setTab("list")};
+  $("tab-list").onclick=function(){BACK=null;setTab("list")};
   initExport();initExtra();render();
   $("state").value="AZ";setTab("list");render();
 }
@@ -397,11 +400,12 @@ function syncSel(){var r=filtered();var n=Object.keys(SEL).filter(function(k){re
 function initExport(){
   drawFields();drawChain();
   $("fieldbox").addEventListener("change",function(e){var f=e.target.getAttribute("data-f");if(f!=null)FOFF[f]=!e.target.checked});
-  $("grid").addEventListener("click",function(e){var b=e.target.closest(".segtag");if(b){setTab("chain");setTimeout(function(){jumpSeg(b.getAttribute("data-seg"))},60)}});
+  $("grid").addEventListener("click",function(e){var b=e.target.closest(".segtag");if(b){BACK={st:getState(),y:window.scrollY};setTab("chain");setTimeout(function(){jumpSeg(b.getAttribute("data-seg"))},60)}});
+  $("backbtn").onclick=function(){if(!BACK)return;var b=BACK;BACK=null;setState(b.st);window.scrollTo(0,b.y)};
   $("grid").addEventListener("change",function(e){if(e.target.classList.contains("sel")){SEL[e.target.getAttribute("data-i")]=e.target.checked;syncSel()}});
   $("selall").addEventListener("change",function(e){filtered().forEach(function(x){SEL[x.i]=e.target.checked});render()});
   $("x-xlsx").onclick=exportXlsx;$("x-pdf").onclick=exportPdf;
-  $("tab-chain").onclick=function(){setTab("chain")};
+  $("tab-chain").onclick=function(){BACK=null;setTab("chain")};
   $("diagram").addEventListener("click",function(e){var b=e.target.closest(".dbox");if(b)jumpSeg(b.getAttribute("data-seg"))});
   $("chain").addEventListener("click",function(e){var b=e.target.closest("button.us");if(!b)return;$("parent").value=b.getAttribute("data-p");$("q").value="";$("state").value="all";$("chainf").value="all";setTab("list");render();window.scrollTo(0,0)});
 }
